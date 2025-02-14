@@ -1,3 +1,4 @@
+# app/crud.py
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from . import models, schemas
@@ -10,9 +11,18 @@ async def create_book(db: AsyncSession, book: schemas.BookCreate):
     await db.refresh(db_book)
     return db_book
 
-# Получение всех книг
-async def get_books(db: AsyncSession, skip: int = 0, limit: int = 100):
-    result = await db.execute(select(models.Book).offset(skip).limit(limit))
+# Получение всех книг с поддержкой фильтрации
+async def get_books(db: AsyncSession, skip: int = 0, limit: int = 100, book_name: str = None, author: str = None):
+    # Формируем запрос для получения книг
+    query = select(models.Book)
+    # Если задан фильтр по названию, добавляем условие в запрос
+    if book_name:
+        query = query.where(models.Book.book_name.ilike(f"%{book_name}%"))
+    # Если задан фильтр по автору, добавляем условие в запрос
+    if author:
+        query = query.where(models.Book.author.ilike(f"%{author}%"))
+    query = query.offset(skip).limit(limit)
+    result = await db.execute(query)
     return result.scalars().all()
 
 # Получение книги по ID

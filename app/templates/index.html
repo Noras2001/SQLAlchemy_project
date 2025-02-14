@@ -1,7 +1,6 @@
 <!-- app/templates/index.html -->
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -133,7 +132,7 @@
                 </form>
             </div>
 
-            <!-- Форма для удаления книги -->
+            <!-- Форма для удаления книги по ID -->
             <div class="form-inline">
                 <h5>Delete Book</h5>
                 <form id="delete-book-form">
@@ -148,6 +147,22 @@
 
         <hr>
 
+        <!-- Форма для фильтрации книг -->
+        <div class="form-inline mb-3">
+            <h5>Фильтрация книг</h5>
+            <form id="filter-form" class="form-inline">
+                <div class="form-group mx-sm-3 mb-2">
+                    <label for="filter_book_name" class="sr-only">Название книги</label>
+                    <input type="text" class="form-control" id="filter_book_name" name="filter_book_name" placeholder="Название книги">
+                </div>
+                <div class="form-group mx-sm-3 mb-2">
+                    <label for="filter_author" class="sr-only">Автор</label>
+                    <input type="text" class="form-control" id="filter_author" name="filter_author" placeholder="Автор">
+                </div>
+                <button type="submit" class="btn btn-secondary mb-2">Фильтровать</button>
+            </form>
+        </div>
+
         <!-- Список книг -->
         <h3>Books List</h3>
         <table class="table table-bordered" id="books-table">
@@ -159,6 +174,7 @@
                     <th>Genre</th>
                     <th>Date of Issue</th>
                     <th>Price</th>
+                    <th>Действия</th> <!-- Новая колонка для кнопок действий -->
                 </tr>
             </thead>
             <tbody>
@@ -171,5 +187,85 @@
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js" defer></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" defer></script>
+
+    <!-- Inline JavaScript для загрузки, фильтрации и удаления книг -->
+    <script>
+    // Функция для загрузки списка книг с сервера
+    async function loadBooks(filters = {}) {
+        // Формируем URL запроса
+        let url = new URL(window.location.origin + "/api/books/");
+        // Добавляем параметры фильтрации к URL, если они заданы
+        Object.keys(filters).forEach(key => {
+            if (filters[key]) {
+                url.searchParams.append(key, filters[key]);
+            }
+        });
+        try {
+            let response = await fetch(url);
+            let books = await response.json();
+            renderBooks(books);
+        } catch (error) {
+            console.error("Ошибка при загрузке книг:", error);
+        }
+    }
+
+    // Функция для отображения книг в таблице
+    function renderBooks(books) {
+        const tbody = document.querySelector("#books-table tbody");
+        tbody.innerHTML = ""; // Очищаем содержимое таблицы
+        books.forEach(book => {
+            let row = document.createElement("tr");
+            // Заполняем ячейки строки данными книги и кнопкой удаления
+            row.innerHTML = `
+                <td>${book.id}</td>
+                <td>${book.book_name}</td>
+                <td>${book.author}</td>
+                <td>${book.genre}</td>
+                <td>${book.date_issue}</td>
+                <td>${book.price}</td>
+                <td><button class="btn btn-danger btn-sm delete-btn" data-id="${book.id}">Удалить</button></td>
+            `;
+            tbody.appendChild(row);
+        });
+        // Назначаем обработчик событий для кнопок удаления
+        document.querySelectorAll(".delete-btn").forEach(button => {
+            button.addEventListener("click", async function() {
+                const bookId = this.getAttribute("data-id");
+                await deleteBook(bookId);
+            });
+        });
+    }
+
+    // Функция для удаления книги по ID
+    async function deleteBook(bookId) {
+        try {
+            let response = await fetch(`/api/books/${bookId}`, {
+                method: "DELETE"
+            });
+            if (response.ok) {
+                // Обновляем список книг после успешного удаления
+                loadBooks();
+            } else {
+                console.error("Ошибка удаления книги");
+            }
+        } catch (error) {
+            console.error("Ошибка при удалении книги:", error);
+        }
+    }
+
+    // Обработчик для формы фильтрации
+    document.getElementById("filter-form").addEventListener("submit", function(event) {
+        event.preventDefault(); // Предотвращаем перезагрузку страницы
+        const bookName = document.getElementById("filter_book_name").value;
+        const author = document.getElementById("filter_author").value;
+        // Загружаем книги с учетом фильтров
+        loadBooks({ book_name: bookName, author: author });
+    });
+
+    // Загрузка списка книг при загрузке страницы
+    window.addEventListener("load", () => {
+        loadBooks();
+    });
+    </script>
 </body>
 </html>

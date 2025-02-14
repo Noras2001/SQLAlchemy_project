@@ -1,3 +1,4 @@
+# app/main.py
 from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -45,10 +46,16 @@ async def read_root(request: Request):
 async def create_book(book: schemas.BookCreate, db: AsyncSession = Depends(get_db_session)):
     return await crud.create_book(db, book)
 
-# Получение всех книг
+# Получение всех книг с поддержкой фильтрации по названию и автору
 @app.get("/api/books/", response_model=list[schemas.Book])
-async def read_books(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db_session)):
-    books = await crud.get_books(db, skip=skip, limit=limit)
+async def read_books(
+    skip: int = 0, 
+    limit: int = 100, 
+    book_name: str = None,   # Параметр для фильтрации по названию книги
+    author: str = None,      # Параметр для фильтрации по автору
+    db: AsyncSession = Depends(get_db_session)
+):
+    books = await crud.get_books(db, skip=skip, limit=limit, book_name=book_name, author=author)
     return books
 
 # Получение книги по ID
